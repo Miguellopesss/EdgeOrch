@@ -15,23 +15,11 @@ EdgeOrch é uma plataforma de orquestração de containers LXC em nós Proxmox u
 
 ## Arquitetura
 
-```text
-Cliente EdgeOrch
-  |
-  | publica pedidos create/reboot/shutdown/delete/migrate
-  v
-ACME CSE oneM2M
-  |
-  | containers: requests, claims, results, inventory, rebalance_decisions
-  v
-AEs Proxmox por nó
-  |
-  | executam operações via API Proxmox
-  v
-Containers LXC
-```
+![Arquitetura EdgeOrch](edgeorch-architecture.png)
 
-O cliente publica pedidos em `/{CSE_BASE}/{PROVISIONING_AE}/requests`. As AEs de nó competem por claims em `claims`, executam o pedido no Proxmox e publicam o resultado no container privado do cliente indicado em `reply_to`.
+A arquitetura é composta por um cluster com um CSE oneM2M central e vários nós Proxmox. Cada nó executa uma AE responsável por registar recursos e publicar informação no CSE. O cliente EdgeOrch comunica com o CSE através da rede/Internet para submeter pedidos e consultar resultados, enquanto as AEs executam as operações nos respetivos nós Proxmox, onde residem as VMs e CTs.
+
+O cliente publica pedidos em `/{CSE_BASE}/{PROVISIONING_AE}/requests`. As AEs de nó registam/publicam recursos no CSE, competem por claims em `claims`, executam o pedido no Proxmox e publicam o resultado no container privado do cliente indicado em `reply_to`.
 
 ## Estrutura
 
