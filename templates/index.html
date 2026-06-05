@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ page_title }}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        ember: {
+                            50: "#fff8eb",
+                            100: "#ffefcc",
+                            300: "#f5c975",
+                            400: "#efb14d",
+                            500: "#d38a17",
+                        },
+                        frost: {
+                            100: "#ddfbff",
+                            300: "#6bd8e7",
+                            500: "#1096a8",
+                        },
+                    },
+                    boxShadow: {
+                        halo: "0 20px 65px rgba(8, 145, 178, 0.22)",
+                    },
+                    fontFamily: {
+                        display: ["'Space Grotesk'", "system-ui", "sans-serif"],
+                        mono: ["'IBM Plex Mono'", "ui-monospace", "monospace"],
+                    },
+                },
+            },
+        };
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/vendor/xterm.css?v=20260522d">
+</head>
+<body class="min-h-screen bg-slate-950 font-display text-slate-100">
+    <div class="pointer-events-none absolute inset-0 overflow-hidden">
+        <div class="absolute left-[-8rem] top-[-6rem] h-72 w-72 rounded-full bg-frost-500/20 blur-3xl"></div>
+        <div class="absolute right-[-4rem] top-16 h-80 w-80 rounded-full bg-ember-500/20 blur-3xl"></div>
+        <div class="absolute bottom-[-8rem] left-1/3 h-96 w-96 rounded-full bg-frost-300/10 blur-3xl"></div>
+    </div>
+
+    <div id="toastContainer" class="pointer-events-none fixed right-5 top-5 z-[90] flex w-full max-w-md flex-col gap-3"></div>
+
+    <div class="pointer-events-none fixed right-5 top-24 z-[220] flex w-full max-w-md flex-col gap-4">
+        <div id="leaseRenewalCard" class="pointer-events-auto relative z-[230] hidden overflow-hidden rounded-[1.8rem] border border-amber-300/30 bg-slate-950/95 shadow-halo backdrop-blur-xl">
+            <div class="border-b border-white/10 bg-[linear-gradient(135deg,rgba(245,201,117,0.20),rgba(16,150,168,0.10))] px-5 py-4">
+                <div class="flex items-start justify-between gap-4">
+                    <div>
+                        <p class="text-[10px] uppercase tracking-[0.35em] text-amber-100/80">Lease</p>
+                        <h3 id="leaseRenewalTitle" class="mt-2 text-xl font-bold text-white">Renew machine</h3>
+                    </div>
+                    <div class="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] uppercase tracking-[0.28em] text-amber-100">
+                        <span id="leaseRenewalCountdown">15s</span>
+                    </div>
+                </div>
+            </div>
+            <div class="space-y-4 px-5 py-5">
+                <p id="leaseRenewalMessage" class="text-sm leading-7 text-slate-300">This machine lease is about to expire. You can renew it before it is removed.</p>
+                <div class="grid gap-3 sm:grid-cols-2">
+                    <div class="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3">
+                        <p class="text-[10px] uppercase tracking-[0.28em] text-slate-500">Machine</p>
+                        <p id="leaseRenewalMachine" class="mt-2 text-sm font-semibold text-white">-</p>
+                    </div>
+                    <div class="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3">
+                        <p class="text-[10px] uppercase tracking-[0.28em] text-slate-500">Extension</p>
+                        <p id="leaseRenewalExtension" class="mt-2 text-sm font-semibold text-white">+5 min</p>
+                    </div>
+                </div>
+                <div id="leaseRenewalNote" class="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm leading-7 text-slate-300">
+                    If you do not answer before the countdown ends, EdgeOrch removes the machine automatically to free up resources.
+                </div>
+                <div class="flex flex-wrap justify-end gap-3">
+                    <button id="leaseDeclineButton" type="button" class="rounded-2xl border border-rose-300/20 bg-rose-300/10 px-4 py-3 text-sm font-medium text-rose-100 transition hover:border-rose-300/45 hover:bg-rose-300/18">
+                        Do not renew
+                    </button>
+                    <button id="leaseRenewButton" type="button" class="rounded-2xl bg-amber-300 px-5 py-3 text-sm font-semibold text-slate-950 transition hover:bg-amber-200">
+                        Renew now
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div id="rebalanceConsentCard" class="pointer-events-auto hidden overflow-hidden rounded-[1.8rem] border border-frost-300/30 bg-slate-950/95 shadow-halo backdrop-blur-xl">
+            <div class="border-b border-white/10 bg-[linear-gradient(135deg,rgba(16,150,168,0.24),rgba(245,201,117,0.12))] px-5 py-4">
+                <div class="flex items-start justify-between gap-4">
+                    <div>
+                        <p class="text-[10px] uppercase tracking-[0.35em] text-frost-100/80">Rebalance</p>
+                        <h3 id="rebalanceConsentTitle" class="mt-2 text-xl font-bold text-white">Migration proposal</h3>
+                    </div>
+                    <div class="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] uppercase tracking-[0.28em] text-frost-100">
+                        <span id="rebalanceConsentCountdown">10s</span>
+                    </div>
+                </div>
+            </div>
+            <div class="space-y-4 px-5 py-5">
+                <p id="rebalanceConsentMessage" class="text-sm leading-7 text-slate-300">A machine was found that can be moved to balance the two nodes.</p>
+                <div class="grid gap-3 sm:grid-cols-2">
+                    <div class="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3">
+                        <p class="text-[10px] uppercase tracking-[0.28em] text-slate-500">Source</p>
+                        <p id="rebalanceConsentSource" class="mt-2 text-sm font-semibold text-white">-</p>
+                    </div>
+                    <div class="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3">
+                        <p class="text-[10px] uppercase tracking-[0.28em] text-slate-500">Target</p>
+                        <p id="rebalanceConsentTarget" class="mt-2 text-sm font-semibold text-white">-</p>
+                    </div>
+                </div>
+                <div id="rebalanceConsentNote" class="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm leading-7 text-slate-300">
+                    You have 10 seconds to accept or decline. If you do not answer, EdgeOrch accepts this migration automatically.
+                </div>
+                <div class="flex flex-wrap justify-end gap-3">
+                    <button id="rebalanceDeclineButton" type="button" class="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-medium text-slate-200 transition hover:border-white/25 hover:bg-white/10">
+                        Not now
+                    </button>
+                    <button id="rebalanceAcceptButton" type="button" class="rounded-2xl bg-frost-500 px-5 py-3 text-sm font-semibold text-slate-950 transition hover:bg-frost-300">
+                        Migrate now
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="relative min-h-screen xl:flex">
+        <aside class="flex w-full shrink-0 flex-col border-b border-white/10 bg-slate-950/80 backdrop-blur-xl xl:sticky xl:top-0 xl:h-screen xl:w-[22rem] xl:border-b-0 xl:border-r">
+            <div class="border-b border-white/10 px-6 py-6">
+                <div class="mt-3">
+                    <img
+                        src="/assets/edgeorch-icon?v=20260522f"
+                        alt="EdgeOrch"
+                        class="h-14 w-auto max-w-[15rem] select-none object-contain drop-shadow-[0_0_22px_rgba(34,211,238,0.18)]"
+                    >
+                </div>
+                <div class="mt-5 flex gap-3">
+                    <button id="openCreateMachineButton" class="flex-1 rounded-2xl bg-ember-400 px-4 py-3 text-sm font-semibold text-slate-950 transition hover:bg-ember-300">
+                        Request machine
+                    </button>
+                    <button id="refreshMachinesButton" class="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-medium text-slate-200 transition hover:border-frost-300/40 hover:bg-frost-300/10">
+                        Refresh
+                    </button>
+                </div>
+            </div>
+
+            <div class="flex items-center justify-between px-6 pb-3 pt-5">
+                <p class="text-xs uppercase tracking-[0.35em] text-slate-500">Machines</p>
+                <span id="machineCountBadge" class="rounded-full bg-white/5 px-2.5 py-1 text-xs text-slate-300">0</span>
+            </div>
+
+            <div id="machineList" class="space-y-3 px-4 pb-4 xl:flex-1 xl:overflow-y-auto"></div>
+        </aside>
+
+        <main class="min-w-0 flex-1 px-6 py-6 lg:px-8 lg:py-8">
+            <section id="emptyStatePanel" class="rounded-[2rem] border border-dashed border-white/10 bg-[linear-gradient(135deg,rgba(16,150,168,0.09),rgba(245,201,117,0.08))] p-8 shadow-halo">
+                <div class="grid gap-8 lg:grid-cols-[1.2fr,0.8fr] lg:items-center">
+                    <div>
+                        <p class="text-xs uppercase tracking-[0.35em] text-ember-300">Empty workspace</p>
+                        <h3 class="mt-4 text-4xl font-bold tracking-tight text-white">You do not have any machines in this client yet.</h3>
+                        <p class="mt-4 max-w-2xl text-sm leading-8 text-slate-300">Create your first machine to unlock the detail panel, the in-browser SSH terminal, and all power actions.</p>
+                        <div class="mt-6 flex flex-wrap gap-3">
+                            <button id="openCreateMachineEmptyButton" class="rounded-2xl bg-ember-400 px-5 py-3 text-sm font-semibold text-slate-950 transition hover:bg-ember-300">
+                                Create first machine
+                            </button>
+                            <button id="refreshEmptyStateButton" class="rounded-2xl border border-white/10 bg-white/5 px-5 py-3 text-sm font-medium text-slate-200 transition hover:border-frost-300/40 hover:bg-frost-300/10">
+                                Refresh inventory
+                            </button>
+                        </div>
+                    </div>
+                    <div class="grid gap-4 md:grid-cols-3 lg:grid-cols-1">
+                        <div class="rounded-3xl border border-white/10 bg-slate-950/55 p-5">
+                            <p class="text-xs uppercase tracking-[0.3em] text-slate-500">Flow</p>
+                            <p class="mt-3 text-lg font-semibold text-white">oneM2M request</p>
+                            <p class="mt-2 text-sm leading-7 text-slate-400">The client publishes to `requests`, waits for the private result, and refreshes the inventory automatically.</p>
+                        </div>
+                        <div class="rounded-3xl border border-white/10 bg-slate-950/55 p-5">
+                            <p class="text-xs uppercase tracking-[0.3em] text-slate-500">Access</p>
+                            <p class="mt-3 text-lg font-semibold text-white">Browser shell</p>
+                            <p class="mt-2 text-sm leading-7 text-slate-400">After creation, you only need the `root` password to open an SSH shell inside the guest.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <div id="machineWorkspace" class="hidden space-y-6">
+                <section class="rounded-[2rem] border border-white/10 bg-white/5 p-6 backdrop-blur">
+                    <div class="flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
+                        <div class="min-w-0">
+                            <p class="text-xs uppercase tracking-[0.35em] text-frost-300">Machine panel</p>
+                            <h2 id="machineTitle" class="mt-3 text-3xl font-bold text-white">Select a machine</h2>
+                            <p id="machineSubtitle" class="mt-2 max-w-2xl text-sm text-slate-400">Choose a machine on the left to see details, actions, and shell access here.</p>
+                        </div>
+
+                        <div id="machineActionToolbar" class="hidden shrink-0 flex-col items-stretch gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end xl:flex-nowrap">
+                            <div id="machineLeasePill" class="hidden items-center gap-3 rounded-2xl border border-amber-300/20 bg-amber-300/10 px-4 py-2.5 text-left sm:min-w-[9rem] sm:justify-between">
+                                <p class="text-[10px] uppercase tracking-[0.28em] text-amber-100/75">Lease</p>
+                                <p id="machineLeaseCountdown" class="font-mono text-sm font-semibold text-amber-50">05:00</p>
+                            </div>
+                            <button id="primaryMachineActionButton" data-action-button="reboot" class="machine-action-button rounded-2xl border border-frost-300/25 bg-frost-300/10 px-4 py-3 text-sm font-medium text-frost-100 transition hover:border-frost-300/55 hover:bg-frost-300/20 disabled:cursor-not-allowed disabled:opacity-40">
+                                Reboot
+                            </button>
+                            <button data-action-button="shutdown" class="machine-action-button rounded-2xl border border-amber-200/25 bg-amber-200/10 px-4 py-3 text-sm font-medium text-amber-100 transition hover:border-amber-200/55 hover:bg-amber-200/20 disabled:cursor-not-allowed disabled:opacity-40">
+                                Shutdown
+                            </button>
+                            <button data-action-button="delete" class="machine-action-button rounded-2xl border border-rose-300/25 bg-rose-300/10 px-4 py-3 text-sm font-medium text-rose-100 transition hover:border-rose-300/55 hover:bg-rose-300/20 disabled:cursor-not-allowed disabled:opacity-40">
+                                Delete machine
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="mt-6 space-y-4">
+                        <div>
+                            <p class="mb-3 text-[11px] uppercase tracking-[0.35em] text-slate-500">Connection and status</p>
+                            <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                                <div class="rounded-[1.5rem] border border-white/10 bg-slate-950/45 p-3.5">
+                                    <p class="text-[10px] uppercase tracking-[0.28em] text-slate-500">VMID</p>
+                                    <p id="detailVmid" class="mt-2 font-mono text-lg text-white">-</p>
+                                </div>
+                                <div class="rounded-[1.5rem] border border-white/10 bg-slate-950/45 p-3.5">
+                                    <p class="text-[10px] uppercase tracking-[0.28em] text-slate-500">IP</p>
+                                    <p id="detailIp" class="mt-2 font-mono text-lg text-white">-</p>
+                                </div>
+                                <div class="rounded-[1.5rem] border border-white/10 bg-slate-950/45 p-3.5">
+                                    <p class="text-[10px] uppercase tracking-[0.28em] text-slate-500">Status</p>
+                                    <p id="detailState" class="mt-2 text-lg text-white">-</p>
+                                </div>
+                                <div class="rounded-[1.5rem] border border-white/10 bg-slate-950/45 p-3.5">
+                                    <p class="text-[10px] uppercase tracking-[0.28em] text-slate-500">Node</p>
+                                    <p id="detailNode" class="mt-2 text-lg text-white">-</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <p class="mb-3 text-[11px] uppercase tracking-[0.35em] text-slate-500">Resources</p>
+                            <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                                <div class="rounded-[1.5rem] border border-white/10 bg-slate-950/45 p-3.5">
+                                    <p class="text-[10px] uppercase tracking-[0.28em] text-slate-500">CPU</p>
+                                    <p id="detailCpu" class="mt-2 font-mono text-lg text-white">-</p>
+                                </div>
+                                <div class="rounded-[1.5rem] border border-white/10 bg-slate-950/45 p-3.5">
+                                    <p class="text-[10px] uppercase tracking-[0.28em] text-slate-500">RAM</p>
+                                    <p id="detailMemory" class="mt-2 font-mono text-lg text-white">-</p>
+                                </div>
+                                <div class="rounded-[1.5rem] border border-white/10 bg-slate-950/45 p-3.5">
+                                    <p class="text-[10px] uppercase tracking-[0.28em] text-slate-500">Disk</p>
+                                    <p id="detailDisk" class="mt-2 font-mono text-lg text-white">-</p>
+                                </div>
+                                <div class="rounded-[1.5rem] border border-white/10 bg-slate-950/45 p-3.5">
+                                    <p class="text-[10px] uppercase tracking-[0.28em] text-slate-500">Network</p>
+                                    <p id="detailNetwork" class="mt-2 font-mono text-lg text-white">-</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-4 rounded-3xl border border-white/10 bg-slate-950/50 p-4">
+                        <p class="text-xs uppercase tracking-[0.3em] text-slate-500">Latest event</p>
+                        <p id="detailMessage" class="mt-3 text-sm leading-7 text-slate-300">No machine is currently selected.</p>
+                    </div>
+                </section>
+
+                <section id="terminalSection" class="rounded-[2rem] border border-white/10 bg-slate-950/60 p-5 shadow-halo backdrop-blur">
+                    <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                        <div>
+                            <p class="text-xs uppercase tracking-[0.35em] text-frost-300">Terminal</p>
+                            <h3 class="mt-2 text-2xl font-bold text-white">Browser SSH shell</h3>
+                        </div>
+                        <div class="flex flex-wrap gap-3">
+                            <button id="connectShellButton" class="rounded-2xl bg-frost-500 px-4 py-3 text-sm font-semibold text-slate-950 transition hover:bg-frost-300 disabled:cursor-not-allowed disabled:opacity-40">
+                                Open shell
+                            </button>
+                            <button id="disconnectShellButton" class="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-medium text-slate-200 transition hover:border-white/25 hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40">
+                                Close shell
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="mt-5 overflow-hidden rounded-[1.75rem] border border-white/10 bg-slate-950">
+                        <div class="flex items-center justify-between border-b border-white/10 bg-white/5 px-4 py-3 text-xs uppercase tracking-[0.28em] text-slate-500">
+                            <span id="terminalLabel">No machine selected</span>
+                            <span id="terminalStateBadge" class="rounded-full bg-white/5 px-3 py-1 text-[10px] text-slate-400">offline</span>
+                        </div>
+                        <div class="relative h-[30rem]">
+                            <div id="terminalPlaceholder" class="absolute inset-0 z-10 flex flex-col items-center justify-center gap-4 bg-[radial-gradient(circle_at_top,_rgba(16,150,168,0.18),_rgba(2,6,23,0.96)_58%)] px-6 text-center backdrop-blur-[2px]">
+                                <div id="terminalPlaceholderBadge" class="rounded-full border border-white/10 bg-white/5 px-4 py-1.5 text-xs uppercase tracking-[0.35em] text-slate-400">SSH</div>
+                                <div>
+                                    <h4 id="terminalPlaceholderTitle" class="text-2xl font-bold text-white">Ready to connect to the guest</h4>
+                                    <p id="terminalPlaceholderMessage" class="mt-2 max-w-md text-sm leading-7 text-slate-400">Select a running machine and open the shell. You will only be asked for the root password at that point.</p>
+                                </div>
+                            </div>
+                            <div id="terminalContainer" class="h-full w-full p-4 font-mono transition-opacity duration-200"></div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <div id="createMachineModal" class="fixed inset-0 z-50 hidden items-start justify-center overflow-y-auto bg-slate-950/75 px-4 py-2 backdrop-blur-sm md:items-center">
+        <div class="mx-auto my-0 w-full max-w-4xl rounded-[2rem] border border-white/10 bg-slate-950/95 p-4 shadow-halo lg:p-5">
+            <div class="flex items-start justify-between gap-4">
+                <div>
+                    <p class="text-xs uppercase tracking-[0.35em] text-ember-300">New request</p>
+                    <h3 class="mt-2 text-3xl font-bold text-white">Create machine</h3>
+                    <p class="mt-2 max-w-3xl text-sm leading-6 text-slate-400">Choose the container resources and, if you want, define the `root` password straight away. Every new machine starts with a temporary lease and can be renewed later.</p>
+                </div>
+                <button id="closeCreateMachineButton" type="button" class="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-slate-200 transition hover:border-white/25 hover:bg-white/10">
+                    Close
+                </button>
+            </div>
+
+            <form id="createMachineForm" action="#" method="post" class="mt-4 grid gap-3 md:grid-cols-2">
+                <div>
+                    <label class="mb-2 block text-sm font-medium text-slate-200" for="hostname">Hostname</label>
+                    <input id="hostname" name="hostname" value="{{ default_form.hostname }}" class="w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3 text-slate-100 outline-none transition focus:border-frost-300/60 focus:ring-2 focus:ring-frost-500/20" required>
+                </div>
+
+                <div>
+                    <label class="mb-2 block text-sm font-medium text-slate-200" for="template">Template</label>
+                    <input id="template" name="template" list="templateSuggestions" value="{{ default_form.template }}" class="w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3 text-slate-100 outline-none transition focus:border-frost-300/60 focus:ring-2 focus:ring-frost-500/20" required>
+                    <datalist id="templateSuggestions">
+                        {% for template in template_suggestions %}
+                        <option value="{{ template }}"></option>
+                        {% endfor %}
+                    </datalist>
+                    <p class="mt-2 text-xs text-slate-400">The `ubuntu-24.04-ssh-enabled` template is the best choice when you want in-browser shell access.</p>
+                </div>
+
+                <div>
+                    <label class="mb-2 block text-sm font-medium text-slate-200" for="cpu">CPU</label>
+                    <input id="cpu" name="cpu" type="number" min="1" value="{{ default_form.cpu }}" class="w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3 text-slate-100 outline-none transition focus:border-frost-300/60 focus:ring-2 focus:ring-frost-500/20" required>
+                </div>
+                <div>
+                    <label class="mb-2 block text-sm font-medium text-slate-200" for="memory_mb">Memory (MB)</label>
+                    <input id="memory_mb" name="memory_mb" type="number" min="256" step="256" value="{{ default_form.memory_mb }}" class="w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3 text-slate-100 outline-none transition focus:border-frost-300/60 focus:ring-2 focus:ring-frost-500/20" required>
+                </div>
+
+                <div>
+                    <label class="mb-2 block text-sm font-medium text-slate-200" for="disk_gb">Disk (GB)</label>
+                    <input id="disk_gb" name="disk_gb" type="number" min="4" value="{{ default_form.disk_gb }}" class="w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3 text-slate-100 outline-none transition focus:border-frost-300/60 focus:ring-2 focus:ring-frost-500/20" required>
+                </div>
+                <div>
+                    <label class="mb-2 block text-sm font-medium text-slate-200" for="network">Network</label>
+                    <input id="network" name="network" value="{{ default_form.network }}" class="w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3 text-slate-100 outline-none transition focus:border-frost-300/60 focus:ring-2 focus:ring-frost-500/20" required>
+                </div>
+
+                <div class="md:col-span-2">
+                    <label class="mb-2 block text-sm font-medium text-slate-200" for="rootPassword">Root password</label>
+                    <input id="rootPassword" name="rootPassword" type="password" placeholder="Leave blank to use {{ ct_login_password_hint }}" class="w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3 text-slate-100 outline-none transition focus:border-frost-300/60 focus:ring-2 focus:ring-frost-500/20">
+                    <p class="mt-2 text-xs leading-6 text-slate-400">If you leave this empty, the machine uses the default password {{ ct_login_password_hint }}.</p>
+                    <p class="mt-1 text-xs leading-6 text-amber-200/80">Initial lease: {{ (machine_lease_seconds // 60) }} min. During the last {{ machine_renewal_prompt_seconds }} seconds, EdgeOrch asks whether you want to renew it.</p>
+                </div>
+
+                <div class="flex justify-end gap-3 pt-2 md:col-span-2">
+                    <button id="cancelCreateMachineButton" type="button" class="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-medium text-slate-200 transition hover:border-white/25 hover:bg-white/10">
+                        Cancel
+                    </button>
+                    <button id="createMachineButton" type="submit" class="inline-flex items-center justify-center rounded-2xl bg-ember-400 px-5 py-3 font-semibold text-slate-950 transition hover:bg-ember-300 disabled:cursor-not-allowed disabled:opacity-60">
+                        Create machine
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="provisioningOverlay" class="fixed inset-0 z-[160] hidden items-center justify-center bg-slate-950/90 px-6 backdrop-blur-md">
+        <div class="mx-auto max-w-xl text-center">
+            <div class="relative mx-auto h-44 w-44">
+                <div class="absolute inset-0 rounded-full border border-white/10"></div>
+                <div class="absolute inset-3 animate-spin rounded-full border-4 border-transparent border-r-frost-300 border-t-frost-300"></div>
+                <div class="absolute inset-10 animate-spin rounded-full border-4 border-transparent border-b-ember-300 border-l-ember-300 [animation-direction:reverse] [animation-duration:1.4s]"></div>
+                <div class="absolute inset-[3.9rem] rounded-full bg-white/5 shadow-halo"></div>
+                <div class="absolute inset-0 rounded-full bg-[radial-gradient(circle,rgba(16,150,168,0.14),transparent_55%)]"></div>
+            </div>
+            <p id="provisioningOverlayEyebrow" class="mt-8 text-xs uppercase tracking-[0.45em] text-frost-300">Provisioning</p>
+            <h3 id="provisioningOverlayTitle" class="mt-4 text-4xl font-bold tracking-tight text-white">Creating your machine</h3>
+            <p id="provisioningOverlayMessage" class="mt-4 text-base leading-8 text-slate-300">Publishing the request to the CSE and waiting for the AE to finish creating the CT in Proxmox.</p>
+        </div>
+    </div>
+
+    <div id="shellPasswordModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-950/70 px-4 backdrop-blur-sm">
+        <div class="w-full max-w-md rounded-[2rem] border border-white/10 bg-slate-950/95 p-6 shadow-halo">
+            <p class="text-xs uppercase tracking-[0.35em] text-frost-300">SSH connection</p>
+            <h3 class="mt-3 text-2xl font-bold text-white">Root password</h3>
+            <p id="shellPasswordHint" class="mt-2 text-sm leading-7 text-slate-400">Enter the root password to open the shell for this machine.</p>
+
+            <form id="shellPasswordForm" action="#" method="post" class="mt-6 space-y-4">
+                <input id="shellPasswordInput" type="password" autocomplete="current-password" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-slate-100 outline-none transition focus:border-frost-300/60 focus:ring-2 focus:ring-frost-500/20" placeholder="Root password" required>
+                <div class="flex justify-end gap-3">
+                    <button id="cancelShellPasswordButton" type="button" class="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-medium text-slate-200 transition hover:border-white/25 hover:bg-white/10">
+                        Cancel
+                    </button>
+                    <button type="submit" class="rounded-2xl bg-frost-500 px-4 py-3 text-sm font-semibold text-slate-950 transition hover:bg-frost-300">
+                        Connect
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="actionConfirmModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-950/70 px-4 backdrop-blur-sm">
+        <div class="w-full max-w-lg rounded-[2rem] border border-white/10 bg-slate-950/95 p-6 shadow-halo">
+            <div class="flex items-start justify-between gap-4">
+                <div>
+                    <p id="actionConfirmEyebrow" class="text-xs uppercase tracking-[0.35em] text-ember-300">Confirm</p>
+                    <h3 id="actionConfirmTitle" class="mt-3 text-2xl font-bold text-white">Confirm action</h3>
+                    <p id="actionConfirmMessage" class="mt-3 text-sm leading-7 text-slate-400">Review this action before continuing.</p>
+                </div>
+                <button id="closeActionConfirmButton" type="button" class="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-slate-200 transition hover:border-white/25 hover:bg-white/10">
+                    Close
+                </button>
+            </div>
+
+            <div id="actionConfirmNote" class="mt-5 rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm leading-7 text-slate-300">
+                The action will be sent to the provisioning AE and executed in Proxmox.
+            </div>
+
+            <div class="mt-6 flex justify-end gap-3">
+                <button id="cancelActionConfirmButton" type="button" class="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-medium text-slate-200 transition hover:border-white/25 hover:bg-white/10">
+                    Cancel
+                </button>
+                <button id="confirmActionButton" type="button" class="rounded-2xl bg-ember-400 px-5 py-3 text-sm font-semibold text-slate-950 transition hover:bg-ember-300">
+                    Confirm
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        window.APP_BOOTSTRAP = {
+            defaults: {{ default_form | tojson }},
+            templateSuggestions: {{ template_suggestions | tojson }},
+            websocketPath: {{ websocket_path | tojson }},
+            loginUserHint: {{ ct_login_user_hint | tojson }},
+            loginPasswordHint: {{ ct_login_password_hint | tojson }},
+            machineLeaseSeconds: {{ machine_lease_seconds | tojson }},
+            machineRenewalPromptSeconds: {{ machine_renewal_prompt_seconds | tojson }},
+        };
+    </script>
+    <script src="/static/vendor/xterm.js?v=20260522d"></script>
+    <script src="/static/vendor/xterm-addon-fit.js?v=20260522d"></script>
+    <script src="/static/app.js?v=20260529a"></script>
+</body>
+</html>

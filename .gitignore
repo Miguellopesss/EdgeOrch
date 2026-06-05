@@ -1,0 +1,7 @@
+/build
+.env
+/venv
+zz_ESTRUTURA.txt
+/docs
+ComandoDarBuild.txt
+build_edgeorch.ps1
