@@ -254,14 +254,6 @@ Se quiser distribuir configuração junto do executável, coloque um `.env` ao l
 - `POST /api/rebalance/proposals/{proposal_id}/decline` - recusar migração proposta.
 - `WS /ws/terminal` - terminal SSH via WebSocket.
 
-## Notas de segurança
-
-- Não coloque tokens Proxmox ou passwords reais no repositório.
-- Use API Tokens Proxmox com permissões mínimas necessárias.
-- `PROXMOX_VERIFY_SSL=false` é útil em laboratório, mas em produção deve usar certificados válidos.
-- O terminal SSH usa a password root indicada pelo utilizador ou pela hint configurada.
-- Os resultados do cliente escondem `root_password` antes de ecoar dados para a interface.
-
 ## Problemas comuns
 
 - `Missing environment variable`: confirme que o `.env` está no local certo ou defina `EDGEORCH_ENV_FILE`.
