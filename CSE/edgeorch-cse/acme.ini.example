@@ -1,0 +1,36 @@
+; /root/edgeorch-cse/acme.ini
+;
+; Auto-generated configuration file for the [ACME] CSE.
+;
+; This file was created by the on-boarding process and can be modified manually by
+; editing the values below, or by adding new sections to override the default values.
+;
+; The file is in the INI format. Lines starting with a semicolon (;) are comments.
+; The configuration is divided into sections, each section starting with a section
+; name in square brackets ([section.name]). The section name is followed by a list
+; of key-value pairs, one per line, in the format key=value. The key and value are
+; separated by an equal sign (=).
+; 
+; created: 2026-05-20 17:57:22
+;
+; CSE type: IN
+; Environment: Regular
+;
+
+[basic.config]
+cseType = IN
+cseID = id-in
+cseName = cse-in
+serviceProviderID = //acme.example.com
+adminID = CAdmin
+networkInterface = 0.0.0.0
+cseHost = ${hostIPAddress}
+httpPort = 8080
+cseSecret = <CSE_SECRET>
+databaseType = tinydb
+logLevel = info
+consoleTheme = dark
+
+[cse.registration]
+allowedCSROriginators = /id-in,/id-mn,/id-asn
+
